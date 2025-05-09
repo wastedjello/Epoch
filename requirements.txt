@@ -1,0 +1,10 @@
+transformers  
+torch 
+datasets  
+scikit-learn  
+librosa 
+matplotlib  
+whisper 
+Pillow 
+tensorflow
+torch
