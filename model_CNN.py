@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class CNNModel(nn.Module):
     def __init__(self, audio_features, num_classes):
-        super(FusionModel, self).__init__()
+        super(CNNModel, self).__init__()
         self.cnn_branch = nn.Sequential(
             nn.Conv2d(3, 16, kernel_size=3, padding=1),
             nn.BatchNorm2d(16),
