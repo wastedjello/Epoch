@@ -3,7 +3,7 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from fusion_dutils import SpectrogramAudioDataset
-from models.model_fusion import FusionModel
+from models.model_fusion import ModelCNN
 import os
 import numpy as np
 from torchvision import transforms
