@@ -1,53 +1,56 @@
 import torch
 import torch.nn as nn
-import torchvision.models as models
 
-class FusionModel(nn.Module):
-    def __init__(self, audio_features=102, num_classes=8):
+class CNNModel(nn.Module):
+    def __init__(self, audio_features, num_classes):
         super(FusionModel, self).__init__()
+        self.cnn_branch = nn.Sequential(
+            nn.Conv2d(3, 16, kernel_size=3, padding=1),
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
 
-        # ResNet18 backbone
-        base_model = models.resnet18(pretrained=True)
-        base_model.fc = nn.Identity()  # Remove final classification layer
-        self.cnn = base_model
-        self.cnn_fc = nn.Sequential(
-            nn.Linear(512, 256),
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(256, 128),
+            nn.Dropout2d(0.3),
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Dropout2d(0.4),
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
         )
 
-        # Audio MLP branch
         self.audio_branch = nn.Sequential(
-            nn.Linear(audio_features, 256),
+            nn.Linear(audio_features, 128),
             nn.ReLU(),
-            nn.LayerNorm(256),
-            nn.Dropout(0.4),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.LayerNorm(128)
+            nn.Dropout(0.3),
+            nn.Linear(128, 64),
+            nn.ReLU()
         )
 
-        # Fusion MLP
-        self.fusion_fc = nn.Sequential(
-            nn.Linear(256, 128),
+        self.classifier = nn.Sequential(
+            nn.Linear(256 * 7 * 7 + 64, 256),
             nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(128, num_classes)
+            nn.Dropout(0.5),
+            nn.Linear(256, num_classes)
         )
 
     def forward(self, image, audio):
-        # Extract visual features
-        image_feat = self.cnn(image)
-        image_feat = self.cnn_fc(image_feat)
-
-        # Extract audio features
-        audio_feat = self.audio_branch(audio)
-
-        # Combine features
-        fused = torch.cat((image_feat, audio_feat), dim=1)
-
-        # Predict
-        out = self.fusion_fc(fused)
-        return out
+        x_img = self.cnn_branch(image)
+        x_img = x_img.view(x_img.size(0), -1)
+        x_audio = self.audio_branch(audio)
+        x = torch.cat((x_img, x_audio), dim=1)
+        return self.classifier(x)
